@@ -210,7 +210,6 @@ ldap_begin(ForeignScanState *node, int eflags)
 	LDAP			*ldap_connection;
 	LDAPMessage		*ldap_answer;
 	int				ldap_result;
-	int en = 0;
 
 	LdapFdwExecutionState  *festate;
 	char			*query;
@@ -232,7 +231,7 @@ ldap_begin(ForeignScanState *node, int eflags)
 	if (ldap_connection == NULL)
 		ereport(ERROR,
 				(errcode(ERRCODE_FDW_UNABLE_TO_ESTABLISH_CONNECTION),
-				 errmsg("failed to create LDAP handler for: %s:%d", srv_address, srv_port)
+				 errmsg("failed to create LDAP handler for address '%s' on port '%d'", srv_address, srv_port)
 				));
 
 	ldap_result = ldap_set_option(ldap_connection, LDAP_OPT_PROTOCOL_VERSION, &srv_ldap_version);
@@ -240,7 +239,7 @@ ldap_begin(ForeignScanState *node, int eflags)
 	if (ldap_result != LDAP_SUCCESS)
 		ereport(ERROR,
 				(errcode(ERRCODE_FDW_UNABLE_TO_ESTABLISH_CONNECTION),
-				 errmsg("failed to set Version 3 option for LDAP's: %s:%d", srv_address, srv_port)
+				 errmsg("failed to set version 3 for LDAP server on address '%s' port '%d'. LDAP ERROR: %s", srv_address, srv_port, ldap_err2string(ldap_result))
 				));
 
 	ldap_result = ldap_simple_bind_s(ldap_connection, srv_user_dn, srv_password );
@@ -248,7 +247,7 @@ ldap_begin(ForeignScanState *node, int eflags)
 	if (ldap_result != LDAP_SUCCESS)
 		ereport(ERROR,
 				(errcode(ERRCODE_FDW_UNABLE_TO_ESTABLISH_CONNECTION),
-				 errmsg("failed to authenticate with LDAP's using user_dn: %s. LDAP ERROR: %s", srv_user_dn, ldap_err2string(ldap_result))
+				 errmsg("failed to authenticate to LDAP server using user_dn: %s. LDAP ERROR: %s", srv_user_dn, ldap_err2string(ldap_result))
 				));
 
 	query = (char *) palloc(1024);
@@ -260,7 +259,7 @@ ldap_begin(ForeignScanState *node, int eflags)
 	if (ldap_result != LDAP_SUCCESS)
 		ereport(ERROR,
 				(errcode(ERRCODE_FDW_UNABLE_TO_CREATE_EXECUTION),
-				 errmsg("failed to execute the LDAP's search: %s. LDAP ERROR: %s", query, ldap_err2string(ldap_result))
+				 errmsg("failed to execute the LDAP search '%s' on base_dn '%s'. LDAP ERROR: %s", query, srv_base_dn, ldap_err2string(ldap_result))
 				));
 
 	festate = (LdapFdwExecutionState *) palloc(sizeof(LdapFdwExecutionState));
@@ -303,7 +302,11 @@ ldap_iterate(ForeignScanState *node)
 		/* 
 		 * FIXME
 		 *
-		 * actually i'm using a query that fetches all object class, but there some objects that don't have attibute, this must be handled.
+		 * actually i'm using a query that fetches all object class, but there
+		 * some objects that don't have attibute, this must be handled.
+		 *
+		 * TODO
+		 * the attribute fecthing could be improve to not loops every ldap_iterate call.
 		 */
 		for (i=0; i < total_attributes; i++)
 		{
