@@ -1,0 +1,24 @@
+{
+   "name": "ldap_fdw",
+   "abstract": "LDAP Foreign Data Wrapper",
+   "description": "LDAP Foreign Data Wrapper",
+   "version": "0.0.1",
+   "maintainer": "Dickson S. Guedes <guedes@guedesoft.net>",
+   "license": "postgresql",
+   "provides": {
+      "ldap_fdw": {
+         "abstract": "LDAP FDW",
+         "file": "sql/ldap_fdw.sql",
+         "docfile": "doc/ldap_fdw.md",
+         "version": "0.0.1"
+      }
+   },
+   "release_status": "unstable",
+
+   "generated_by": "Dickson S. Guedes <guedes@guedesoft.net>",
+
+   "meta-spec": {
+      "version": "1.0.0",
+      "url": "http://pgxn.org/meta/spec.txt"
+   }
+}

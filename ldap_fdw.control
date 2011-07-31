@@ -1,0 +1,5 @@
+# ldap_fdw extension
+comment = 'LDAP Foreign Data Wrapper'
+default_version = '0.0.1'
+module_pathname = '$libdir/ldap_fdw'
+relocatable = true
