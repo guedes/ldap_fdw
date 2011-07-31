@@ -93,4 +93,6 @@ The `ldap_fdw` FDW has the follow dependencies other than PostgreSQL:
 Copyright and License
 ---------------------
 
+This software is released under the PostgreSQL Licence.
+
 Copyright (c) 2011 Dickson S. Guedes.
