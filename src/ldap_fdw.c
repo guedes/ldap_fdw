@@ -252,10 +252,10 @@ ldap_begin(ForeignScanState *node, int eflags)
 				));
 
 	query = (char *) palloc(1024);
-	snprintf(query, 1024, "(&(objectClass=*)(uid=*))");
+	snprintf(query, 1024, "(&(objectClass=*))");
 	get_str_attributes(&attributes, node->ss.ss_currentRelation);
 
-	ldap_result = ldap_search_s(ldap_connection, srv_base_dn, LDAP_SCOPE_SUBTREE, query, attributes, 0, &ldap_answer);
+	ldap_result = ldap_search_s(ldap_connection, srv_base_dn, LDAP_SCOPE_ONELEVEL, query, attributes, 0, &ldap_answer);
 
 	if (ldap_result != LDAP_SUCCESS)
 		ereport(ERROR,
