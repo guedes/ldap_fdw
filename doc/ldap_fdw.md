@@ -48,13 +48,10 @@ Support
 
 * [github](http://github.net/guedes/ldap_fdw)
 
-Author
-------
-
-[Dickson S. Guedes](http://github.net/guedes)
-
 Copyright and License
 ---------------------
+
+This software is released under the PostgreSQL Licence.
 
 Copyright (c) 2011 Dickson S. Guedes.
 
