@@ -24,7 +24,7 @@ For default ldap_fdw extension installs local server `ldap_local_service` that p
 
     CREATE SERVER ldap_my_server_service
     FOREIGN DATA WRAPPER ldap_fdw
-    OPTIONS ( address 'my_ldap_server', port '1234');
+    OPTIONS ( address 'my_ldap_server', port '389');
 
 Then create user mapping:
 
@@ -42,6 +42,9 @@ Finally create a foreign table with a base DN for some OU:
     SERVER ldap_my_server_service
     OPTIONS (base_dn 'OU=people,DC=example,DC=com');
 
+And voila!
+
+    SELECT * FROM ldap_people WHERE mail = 'user@mail.com';
 
 Support
 -------
