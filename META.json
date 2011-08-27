@@ -7,13 +7,6 @@
    "license": {
 	   "PostgreSQL": "http://www.postgresql.org/about/licence"
    },
-   "prereqs": {
-	   "runtime": {
-		   "requires": {
-            "PostgreSQL": "9.1.0"
-         },
-      }
-   },
    "resources": {
       "bugtracker": {
          "web": "https://github.com/theory/pgtap/issues"
@@ -41,7 +34,7 @@
    "tags": [
 		"ldap",
 		"fdw",
-		"SQL/MED",
+		"SQL MED",
 		"foreing data wrapper",
 		"external data"
    ]
