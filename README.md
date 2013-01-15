@@ -22,10 +22,10 @@ The dependencies are:
  - OpenLDAP
 
 To install the build dependencies on redhat based systems:
+
     yum install make postgresql92-devel gcc openldap-devel
 
-The postgres92-devel package can be found in the PostgreSQL YUM Repository:
-    http://yum.postgresql.org/
+The postgres92-devel package can be found in the PostgreSQL YUM Repository: http://yum.postgresql.org/
 
 Building
 --------
