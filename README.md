@@ -15,6 +15,18 @@ Do you like to use it in production? You are crazy, please **DO NOT USE IT ON PR
 Do you like to help to improve it and turn it production-ready? Cool! You are
 welcome! ":)
 
+Dependencies
+------------
+The dependencies are:
+ - PostgreSQL
+ - OpenLDAP
+
+To install the build dependencies on redhat based systems:
+    yum install make postgresql92-devel gcc openldap-devel
+
+The postgres92-devel package can be found in the PostgreSQL YUM Repository:
+    http://yum.postgresql.org/
+
 Building
 --------
 
@@ -44,7 +56,10 @@ package management system such as RPM to install PostgreSQL, be sure that the
 `-devel` package is also installed. If necessary tell the build process where
 to find it:
 
-    env PG_CONFIG=/path/to/pg_config make && make installcheck && make install
+    export PATH="$PATH:/usr/pgsql-9.2/bin"
+    make
+    make installcheck
+    make install
 
 And finally, if all that fails (and if you're on PostgreSQL 8.1 or lower, it
 likely will), copy the entire distribution directory to the `contrib/`
@@ -83,12 +98,6 @@ schema, use the `PGOPTIONS` environment variable to specify the schema, like
 so:
 
     PGOPTIONS=--search_path=extensions psql -d mydb -f ldap_fdw.sql
-
-Dependencies
-------------
-The `ldap_fdw` FDW has the follow dependencies other than PostgreSQL:
-
-* LDAP
 
 Copyright and License
 ---------------------
