@@ -32,8 +32,8 @@ You need to use GNU make, which may well be installed on your system as
 `gmake`:
 
     gmake
-    gmake install
     gmake installcheck
+    gmake install
 
 If you encounter an error such as:
 
