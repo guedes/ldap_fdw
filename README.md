@@ -23,13 +23,14 @@ The dependencies are:
 
 To build you will also need:
  - GNU make
- - GCC 4.6 or newer
+ - GCC
 
 To install the build dependencies on redhat based systems:
 
-    yum install make postgresql92-devel gcc openldap-devel
+    yum install make postgresql91-devel gcc openldap-devel
 
-The postgres92-devel package can be found in the PostgreSQL YUM Repository: http://yum.postgresql.org/
+The postgres91-devel package can be found in the PostgreSQL YUM Repository: http://yum.postgresql.org/
+Compiling against 9.2 on RHEL6 is not yet supported.
 
 To install the build dependencies on debian based systems:
 
