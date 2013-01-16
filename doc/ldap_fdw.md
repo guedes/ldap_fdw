@@ -28,7 +28,7 @@ For default ldap_fdw extension installs local server `ldap_local_service` that p
 
 Then create user mapping:
 
-	CREATE USER MAPPPING FOR current_user
+    CREATE USER MAPPING FOR current_user
     SERVER ldap_my_server_service
     OPTIONS (user_dn 'cn=the_ldap_user,dc=example,dc=com', password 'the_ldap_user_password');
 
