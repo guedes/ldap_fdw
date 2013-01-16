@@ -23,7 +23,7 @@ The dependencies are:
 
 To build you will also need:
  - GNU make
- - GCC
+ - GCC 4.6 or newer
 
 To install the build dependencies on redhat based systems:
 
