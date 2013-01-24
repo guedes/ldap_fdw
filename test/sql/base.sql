@@ -1,8 +1,18 @@
-\set ECHO 0
-BEGIN;
-\i sql/ldap_fdw.sql
-\set ECHO all
+CREATE EXTENSION ldap_fdw;
 
--- Tests goes here.
+CREATE SERVER ldap_test_server
+FOREIGN DATA WRAPPER ldap_fdw
+OPTIONS ( address 'localhost', port '389');
 
-ROLLBACK;
+CREATE USER MAPPING FOR current_user
+SERVER ldap_test_server
+OPTIONS (user_dn 'cn=admin,dc=guedesoft,dc=net', password 'ldap');
+
+CREATE FOREIGN TABLE ldap_people (
+   dn text,
+   object_body text
+)
+SERVER ldap_test_server
+OPTIONS (base_dn 'DC=guedesoft,DC=net');
+
+SELECT * FROM ldap_people WHERE dn = 'cn=admin,dc=guedesoft,dc=net';
