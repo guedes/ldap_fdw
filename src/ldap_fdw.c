@@ -360,7 +360,7 @@ ldapIterateForeignScan(ForeignScanState *node)
   char                    *dn;
   char                    *attribute;
 
-  char                    object_body[1024];
+  char                    object_body[1024] = "";
   char                    **values;
   char                    **temp;
 
@@ -375,7 +375,7 @@ ldapIterateForeignScan(ForeignScanState *node)
           attribute = ldap_next_attribute(festate->ldap_connection, festate->ldap_entry, ber))
     {
       strcat(object_body, attribute);
-      strcat(object_body, ": ");
+      strcat(object_body, " => \"");
 
       if ((temp = ldap_get_values(festate->ldap_connection, festate->ldap_entry, attribute)) != NULL)
       {
@@ -385,9 +385,9 @@ ldapIterateForeignScan(ForeignScanState *node)
             strcat(object_body, ",");
 
           strcat(object_body, temp[i]);
-          strcat(object_body, "\n");
         }
 
+        strcat(object_body, "\",\n");
         ldap_value_free(temp);
       }
 
@@ -406,6 +406,7 @@ ldapIterateForeignScan(ForeignScanState *node)
     if (ber != NULL)
       ber_free(ber, 0);
 
+    pfree(values);
   }
 
   return slot;
@@ -422,6 +423,7 @@ ldapEndForeignScan(ForeignScanState *node)
 {
   LdapFdwExecutionState   *festate  = (LdapFdwExecutionState *) node->fdw_state;
 
+  ldap_memfree(festate->ldap_entry);
   ldap_unbind( festate->ldap_connection );
 }
 

@@ -16,3 +16,4 @@ SERVER ldap_test_server
 OPTIONS (base_dn 'DC=guedesoft,DC=net');
 
 SELECT * FROM ldap_people WHERE dn = 'cn=admin,dc=guedesoft,dc=net';
+SELECT * FROM ldap_people ;
