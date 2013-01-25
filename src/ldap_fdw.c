@@ -360,7 +360,7 @@ ldapIterateForeignScan(ForeignScanState *node)
   char                    *dn;
   char                    *attribute;
 
-  char                    object_body[1024] = "";
+  StringInfoData          object_body;
   char                    **values;
   char                    **temp;
 
@@ -370,24 +370,23 @@ ldapIterateForeignScan(ForeignScanState *node)
   {
     dn = ldap_get_dn(festate->ldap_connection, festate->ldap_entry);
 
+    initStringInfo(&object_body);
+
     for (attribute = ldap_first_attribute(festate->ldap_connection, festate->ldap_entry, &ber);
           attribute != NULL;
           attribute = ldap_next_attribute(festate->ldap_connection, festate->ldap_entry, ber))
     {
-      strcat(object_body, attribute);
-      strcat(object_body, " => \"");
+
+      appendStringInfo(&object_body, "\n%s => \"", attribute);
 
       if ((temp = ldap_get_values(festate->ldap_connection, festate->ldap_entry, attribute)) != NULL)
       {
         for (i = 0; temp[i] != NULL; i++)
         {
-          if (i > 0)
-            strcat(object_body, ",");
-
-          strcat(object_body, temp[i]);
+          appendStringInfo(&object_body, "%s%s", (i > 0) ? "," : "", temp[i]);
         }
 
-        strcat(object_body, "\",\n");
+        appendStringInfo(&object_body, "\",");
         ldap_value_free(temp);
       }
 
@@ -396,7 +395,7 @@ ldapIterateForeignScan(ForeignScanState *node)
 
     values = (char **) palloc(sizeof(char *) * 2);
     values[0] = dn;
-    values[1] = object_body;
+    values[1] = object_body.data;
 
     tuple = BuildTupleFromCStrings(festate->att_in_metadata, values);
     ExecStoreTuple(tuple, slot, InvalidBuffer, false);
