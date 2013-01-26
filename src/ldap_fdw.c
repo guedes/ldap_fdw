@@ -48,6 +48,12 @@
 
 #include <ldap.h>
 
+extern LDAP *ldap_init(char *, int);
+extern int ldap_simple_bind_s(LDAP *, const char *, const char *);
+extern char **ldap_get_values(LDAP *, LDAPMessage *, char *);
+extern void ldap_value_free(char **);
+extern int ldap_unbind(LDAP *);
+
 PG_MODULE_MAGIC;
 
 /*
@@ -58,7 +64,7 @@ typedef struct LdapFdwOption
 {
   const char *option_name;
   Oid        option_context;
-};
+} LdapFdwOption;
 
 static struct LdapFdwOption valid_options[] =
 {
@@ -74,7 +80,7 @@ static struct LdapFdwOption valid_options[] =
 /*
  * Stores the FDW execution state
  */
-typedef struct LdapFdwExecutionState
+typedef struct
 {
   LDAP          *ldap_connection;
   LDAPMessage   *ldap_answer;
@@ -85,7 +91,6 @@ typedef struct LdapFdwExecutionState
 
   char          *address;
   int           port;
-  char          *auth_method;
   char          *ldap_version;
   char          *user_dn;
   char          *password;
@@ -156,7 +161,7 @@ ldapAnalyzeForeignTable(Relation relation,
 static void get_str_attributes(char *attributes[], Relation relation);
 static int  name_str_case_cmp(Name name, const char *str);
 static bool is_valid_option(const char *option, Oid context);
-static void ldap_get_options(Oid foreign_table_id, char **address, int *port, char **auth_method, char **ldap_version, char **user_dn, char **password, char **base_dn);
+static void ldap_get_options(Oid foreign_table_id, char **address, int *port, char **ldap_version, char **user_dn, char **password, char **base_dn);
 
 /*
  * FDW functions implementation
@@ -274,7 +279,6 @@ ldapBeginForeignScan(ForeignScanState *node, int eflags)
 {
   char                    *srv_address = NULL;
   int                     srv_port = 0;
-  char                    *srv_auth_method = NULL;
   char                    *srv_ldap_version = NULL;
   char                    *srv_user_dn = NULL;
   char                    *srv_password = NULL;
@@ -286,15 +290,13 @@ ldapBeginForeignScan(ForeignScanState *node, int eflags)
 
   LdapFdwExecutionState   *festate;
   char                    *query;
-  char                    *attributes[256];
 
   if (eflags & EXEC_FLAG_EXPLAIN_ONLY)
     return;
 
   ldap_get_options(RelationGetRelid(node->ss.ss_currentRelation),
-           &srv_address, &srv_port, &srv_auth_method,
-           &srv_ldap_version, &srv_user_dn, &srv_password,
-           &srv_base_dn);
+           &srv_address, &srv_port, &srv_ldap_version,
+           &srv_user_dn, &srv_password, &srv_base_dn);
 
   ldap_connection = ldap_init(srv_address, srv_port);
 
@@ -322,7 +324,6 @@ ldapBeginForeignScan(ForeignScanState *node, int eflags)
 
   query = (char *) palloc(1024);
   snprintf(query, 1024, "(&(objectClass=*))");
-  get_str_attributes(&attributes, node->ss.ss_currentRelation);
 
   ldap_result = ldap_search_ext_s(ldap_connection, srv_base_dn, LDAP_SCOPE_ONELEVEL, query, NULL, 0, NULL, NULL, NULL, LDAP_NO_LIMIT, &ldap_answer);
 
@@ -349,7 +350,6 @@ ldapIterateForeignScan(ForeignScanState *node)
 {
   LdapFdwExecutionState   *festate  = (LdapFdwExecutionState *) node->fdw_state;
   TupleTableSlot          *slot     = node->ss.ss_ScanTupleSlot;
-  Relation                relation  = node->ss.ss_currentRelation;
 
   BerElement              *ber;
   HeapTuple               tuple;
@@ -424,7 +424,7 @@ ldapIterateForeignScan(ForeignScanState *node)
 static void
 ldapReScanForeignScan(ForeignScanState *node)
 {
-  LdapFdwExecutionState *festate = (LdapFdwExecutionState *) node->fdw_state;
+
 }
 
 static void
@@ -497,7 +497,7 @@ is_valid_option(const char *option, Oid context)
  * Fetch the options for a ldap_fdw foreign table.
  */
 static void
-ldap_get_options(Oid foreign_table_id, char **address, int *port, char **auth_method, char **ldap_version, char **user_dn, char **password, char **base_dn)
+ldap_get_options(Oid foreign_table_id, char **address, int *port, char **ldap_version, char **user_dn, char **password, char **base_dn)
 {
   ForeignTable  *f_table;
   ForeignServer *f_server;
@@ -527,9 +527,6 @@ ldap_get_options(Oid foreign_table_id, char **address, int *port, char **auth_me
     if (strcmp(def->defname, "port") == 0)
       *port = atoi(defGetString(def));
 
-    if (strcmp(def->defname, "auth_method") == 0)
-      *auth_method = defGetString(def);
-
     if (strcmp(def->defname, "ldap_version") == 0)
       *ldap_version = defGetString(def);
 
@@ -550,6 +547,5 @@ ldap_get_options(Oid foreign_table_id, char **address, int *port, char **auth_me
   if (!*port)
     *port = 389;
 
-  *auth_method  = LDAP_AUTH_SIMPLE;
-  *ldap_version = LDAP_VERSION3;
+  *ldap_version = (char *) LDAP_VERSION3;
 }
