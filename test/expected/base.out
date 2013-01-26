@@ -12,29 +12,29 @@ CREATE FOREIGN TABLE ldap_people (
 SERVER ldap_test_server
 OPTIONS (base_dn 'DC=guedesoft,DC=net');
 SELECT * FROM ldap_people WHERE dn = 'cn=admin,dc=guedesoft,dc=net';
-              dn              |                        object_body                        
-------------------------------+-----------------------------------------------------------
- cn=admin,dc=guedesoft,dc=net | objectClass => "simpleSecurityObject,organizationalRole",+
-                              | cn => "admin",                                           +
-                              | description => "LDAP administrator",                     +
-                              | userPassword => "{SSHA}W0P/R7GRoqr1sl2JMMnG0TXn1UP1uVn6" +
+              dn              |                             object_body                             
+------------------------------+---------------------------------------------------------------------
+ cn=admin,dc=guedesoft,dc=net | objectClass => "{\"simpleSecurityObject\",\"organizationalRole\"}",+
+                              | cn => "admin",                                                     +
+                              | description => "LDAP administrator",                               +
+                              | userPassword => "{SSHA}W0P/R7GRoqr1sl2JMMnG0TXn1UP1uVn6",          +
                               | 
 (1 row)
 
 SELECT * FROM ldap_people ;
-               dn               |                        object_body                        
---------------------------------+-----------------------------------------------------------
- cn=admin,dc=guedesoft,dc=net   | objectClass => "simpleSecurityObject,organizationalRole",+
-                                | cn => "admin",                                           +
-                                | description => "LDAP administrator",                     +
-                                | userPassword => "{SSHA}W0P/R7GRoqr1sl2JMMnG0TXn1UP1uVn6" +
+               dn               |                             object_body                             
+--------------------------------+---------------------------------------------------------------------
+ cn=admin,dc=guedesoft,dc=net   | objectClass => "{\"simpleSecurityObject\",\"organizationalRole\"}",+
+                                | cn => "admin",                                                     +
+                                | description => "LDAP administrator",                               +
+                                | userPassword => "{SSHA}W0P/R7GRoqr1sl2JMMnG0TXn1UP1uVn6",          +
                                 | 
- ou=people,dc=guedesoft,dc=net  | objectClass => "organizationalUnit,top",                 +
-                                | ou => "people"                                           +
+ ou=people,dc=guedesoft,dc=net  | objectClass => "{\"organizationalUnit\",\"top\"}",                 +
+                                | ou => "people",                                                    +
                                 | 
- cn=usuario,dc=guedesoft,dc=net | gidNumber => "500",                                      +
-                                | cn => "usuario",                                         +
-                                | objectClass => "posixGroup,top"                          +
+ cn=usuario,dc=guedesoft,dc=net | gidNumber => "500",                                                +
+                                | cn => "usuario",                                                   +
+                                | objectClass => "{\"posixGroup\",\"top\"}",                         +
                                 | 
 (3 rows)
 

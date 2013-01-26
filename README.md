@@ -1,38 +1,36 @@
 LDAP Foreign Data Wrapper for PostgreSQL 9.2
 ============================================
 
-
-This is a very very very experimental PostgreSQL's extension 
-thats implements a Foreign Data Wrapper (FDW) for the LDAP.
-
-I'm using this code to learn FDW internals, and it is a prof of concept.
+This is an initial working on a PostgreSQL's Foreign Data Wrapper (FDW)
+to query LDAP servers.
 
 By all means use it, but do so entirely at your own risk! You have been
 warned!
 
-Do you like to use it in production? You are crazy, please **DO NOT USE IT ON PRODUCTION**. Well, not yet!
+Do you like to use it in production? **DO NOT USE IT ON PRODUCTION** without
+a ton of tests before.
 
-Do you like to help to improve it and turn it production-ready? Cool! You are
-welcome! ":)
+Please help us to improve and test it and turn it production-ready!
 
 Dependencies
 ------------
+
 The dependencies are:
- - PostgreSQL
+ - PostgreSQL >= 9.2
  - OpenLDAP
 
 To build you will also need:
  - GNU make
  - GCC
 
-To install the build dependencies on redhat based systems:
+To install the build dependencies on RedHat based systems:
 
-    yum install make postgresql91-devel gcc openldap-devel
+    yum install make postgresql92-devel gcc openldap-devel
 
-The postgres91-devel package can be found in the PostgreSQL YUM Repository: http://yum.postgresql.org/
+The postgres92-devel package can be found in the PostgreSQL YUM Repository: http://yum.postgresql.org/
 Compiling against 9.2 on RHEL6 is not yet supported.
 
-To install the build dependencies on debian based systems:
+To install the build dependencies on Debian based systems:
 
     apt-get install make libldap2-dev gcc
 
@@ -71,10 +69,9 @@ to find it:
     make installcheck
     make install
 
-And finally, if all that fails (and if you're on PostgreSQL 8.1 or lower, it
-likely will), copy the entire distribution directory to the `contrib/`
-subdirectory of the PostgreSQL source tree and try it there without
-`pg_config`:
+And finally, if all that fails, copy the entire distribution directory
+to the `contrib/`subdirectory of the PostgreSQL source tree and try it
+there without`pg_config`:
 
     env NO_PGXS=1 make && make installcheck && make install
 
@@ -87,27 +84,10 @@ You need to run the test suite using a super user, such as the default
 
     make installcheck PGUSER=postgres
 
-Once ldap_fdw is installed, you can add it to a database. If you're running
-PostgreSQL 9.1.0 or greater, it's a simple as connecting to a database as a
-super user and running:
+Once ldap_fdw is installed, you can add it to a database connecting
+as a super user and running:
 
     CREATE EXTENSION ldap_fdw;
-
-If you've upgraded your cluster to PostgreSQL 9.1 and already had ldap_fdw
-installed, you can upgrade it to a properly packaged extension with:
-
-    CREATE EXTENSION ldap_fdw FROM unpackaged;
-
-For versions of PostgreSQL less than 9.1.0, you'll need to run the
-installation script:
-
-    psql -d mydb -f /path/to/pgsql/share/contrib/ldap_fdw.sql
-
-If you want to install ldap_fdw and all of its supporting objects into a specific
-schema, use the `PGOPTIONS` environment variable to specify the schema, like
-so:
-
-    PGOPTIONS=--search_path=extensions psql -d mydb -f ldap_fdw.sql
 
 Copyright and License
 ---------------------

@@ -13,11 +13,10 @@
  */
 
 #include "postgres.h"
-/*
-#if PG_VERSION_NUM < 90200 || PG_VERSION_NUM >= 90300
-#error wrong Postgresql version this branch is only for 9.2
+
+#if PG_VERSION_NUM < 90200
+#error wrong Postgresql version, 9.2.x is required
 #endif
-*/
 
 #include "funcapi.h"
 #include "access/reloptions.h"
@@ -377,16 +376,27 @@ ldapIterateForeignScan(ForeignScanState *node)
           attribute = ldap_next_attribute(festate->ldap_connection, festate->ldap_entry, ber))
     {
 
-      appendStringInfo(&object_body, "\n%s => \"", attribute);
+      appendStringInfo(&object_body, "%s => ", attribute);
 
       if ((temp = ldap_get_values(festate->ldap_connection, festate->ldap_entry, attribute)) != NULL)
       {
-        for (i = 0; temp[i] != NULL; i++)
+        bool is_array = (temp[1] != NULL);
+
+        if (is_array)
         {
-          appendStringInfo(&object_body, "%s%s", (i > 0) ? "," : "", temp[i]);
+          appendStringInfo(&object_body, "\"{");
+
+          for (i = 0; temp[i] != NULL; i++)
+            appendStringInfo(&object_body, "%s\\\"%s\\\"", (i > 0) ? "," : "", temp[i]);
+
+          appendStringInfo(&object_body, "}\"");
+        }
+        else
+        {
+          appendStringInfo(&object_body, "\"%s\"", temp[0]);
         }
 
-        appendStringInfo(&object_body, "\",");
+        appendStringInfo(&object_body, ",\n");
         ldap_value_free(temp);
       }
 
