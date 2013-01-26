@@ -51,7 +51,7 @@ And voila!
 
                             dn                         |                          object_body                           
     ---------------------------------------------------+----------------------------------------------------------------
-     cn=Dickson Guedes,ou=people,dc=guedesoft,dc=net   | cn => "Dickson Guedes",                                       +
+     cn=Dickson Guedes,ou=people,dc=example,dc=net     | cn => "Dickson Guedes",                                       +
                                                        | gidNumber => "500",                                           +
                                                        | homeDirectory => "/home/users/guedes",                        +
                                                        | sn => "Guedes",                                               +
@@ -62,7 +62,7 @@ And voila!
                                                        | uid => "guedes",                                              +
                                                        | givenName => "{\"Dickson, Guedes\",\"Gueduxo\"}",             +
                                                        | 
-     cn=John Smith,ou=people,dc=guedesoft,dc=net       | cn => "John Smith",                                           +
+     cn=John Smith,ou=people,dc=example,dc=net         | cn => "John Smith",                                           +
                                                        | givenName => "John",                                          +
                                                        | gidNumber => "500",                                           +
                                                        | homeDirectory => "/home/users/jsmith",                        +
