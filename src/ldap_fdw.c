@@ -51,6 +51,7 @@
 extern LDAP *ldap_init(char *, int);
 extern int ldap_simple_bind_s(LDAP *, const char *, const char *);
 extern char **ldap_get_values(LDAP *, LDAPMessage *, char *);
+extern int ldap_count_values(char **);
 extern void ldap_value_free(char **);
 extern int ldap_unbind(LDAP *);
 
@@ -380,7 +381,7 @@ ldapIterateForeignScan(ForeignScanState *node)
 
       if ((temp = ldap_get_values(festate->ldap_connection, festate->ldap_entry, attribute)) != NULL)
       {
-        bool is_array = (temp[1] != NULL);
+        bool is_array = ldap_count_values(temp) > 1;
 
         if (is_array)
         {

@@ -6,10 +6,13 @@ Synopsis
 
 A PostgreSQL's Foreign Data Wrapper (FDW) to query LDAP servers.
 
-**DO NOT USE IT ON PRODUCTION**
+Warnings
+--------
 
-It is not production ready but you could test it in your test
-server and help us to improve it.
+* **DO NOT USE IT ON PRODUCTION**: It is not production ready but you could test it in your test
+server and help us to improve it;
+* it not implements filters *yet*, so if you do a `select * from ldap_table` it will fetch all records from LDAP server. Some LDAP servers limits this to 500;
+* by now it only supports two columns: `dn` and `object_body` where the former is populated with the DN and the last with the LDAP entry converted to a Hstore compatible format;
 
 Description
 -----------
@@ -79,6 +82,7 @@ Well, you could do better than just retrieve that `object_body`! What about usin
 
 See:
 
+    > CREATE EXTENSION hstore;
     > WITH
         _hstore as (
            SELECT hstore(object_body) as h
@@ -95,6 +99,42 @@ See:
      John Smith       | {"inetOrgPerson","posixAccount","top"} | /home/users/jsmith
 
 
+# Integration with pgcrypto
+
+Your application doesn't know how to query a LDAP server? But it know `SELECT`? What about
+check if some user's password is correct using your PostgreSQL server as a `proxy`?
+
+Yes, you can! See:
+
+    > CREATE EXTENSION pgcrypto;
+    > WITH
+     _hstore as
+     (
+        SELECT hstore(object_body) as h
+        FROM ldap_people
+        WHERE dn = 'cn=John Smith,ou=people,dc=example,dc=org'
+     ),
+     _user_pass as
+     (
+        SELECT  substr(decode(substr( h -> 'userPassword' , 7 ), 'base64'), 21) as salt,
+                h -> 'userPassword' as encrypted_password
+        FROM _hstore
+    ),
+    _generated_pass as
+    (
+        SELECT '{SSHA}' || encode(digest( 'TheUserPassword123' || salt, 'sha1') || salt, 'base64') as password,
+               encrypted_password
+        FROM _user_pass
+    )
+    SELECT password = encrypted_password   as password_match
+    FROM  _generated_pass;
+
+     password_match 
+    ----------------
+     t
+    (1 row)
+
+Well to verbose, but you could use a function, no? :)
 
 Support
 -------

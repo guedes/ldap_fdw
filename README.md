@@ -12,6 +12,11 @@ a ton of tests before.
 
 Please help us to improve and test it and turn it production-ready!
 
+Documentation
+-------------
+
+See [doc/ldap\_fdw.md](https://github.com/guedes/ldap_fdw/blob/master/doc/ldap_fdw.md)
+
 Dependencies
 ------------
 
