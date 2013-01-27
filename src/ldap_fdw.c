@@ -52,6 +52,8 @@
 #define LDAP_FDW_SET_OPTION_INT(op, value) if (strcmp(def->defname, value) == 0) *op = atoi(defGetString(def))
 #define LDAP_FDW_SET_DEFAULT_OPTION(op, value) if (!*op) *op = value
 
+#define PROCID_TEXTEQ 67
+
 extern LDAP *ldap_init(char *, int);
 extern int ldap_simple_bind_s(LDAP *, const char *, const char *);
 extern char **ldap_get_values(LDAP *, LDAPMessage *, char *);
@@ -168,6 +170,7 @@ static void _get_str_attributes(char *attributes[], Relation relation);
 static int  _name_str_case_cmp(Name name, const char *str);
 static bool _is_valid_option(const char *option, Oid context);
 static void _ldap_get_options(Oid foreign_table_id, char **address, int *port, char **ldap_version, char **user_dn, char **password, char **base_dn, char **query);
+static void _ldap_check_quals(Node *, TupleDesc, char **, char **, bool *);
 
 /*
  * FDW functions implementation
@@ -295,6 +298,10 @@ ldapBeginForeignScan(ForeignScanState *node, int eflags)
   LDAPMessage             *ldap_answer;
   int                     ldap_result;
 
+  char                    *qual_key = NULL;
+  char                    *qual_value = NULL;
+  bool                    pushdown = false;
+
   LdapFdwExecutionState   *festate;
   StringInfoData          query;
 
@@ -330,7 +337,33 @@ ldapBeginForeignScan(ForeignScanState *node, int eflags)
         ));
 
   initStringInfo(&query);
-  appendStringInfo(&query, "%s", (srv_query == NULL ? "(objectClass=*)" : srv_query ));
+  /* See if we've got a qual we can push down */
+  if (node->ss.ps.plan->qual)
+  {
+    ListCell *lc;
+
+    foreach (lc, node->ss.ps.qual)
+    {
+      /* Only the first qual can be pushed down to Redis */
+      ExprState  *state = lfirst(lc);
+
+      _ldap_check_quals((Node *) state->expr, node->ss.ss_currentRelation->rd_att, &qual_key, &qual_value, &pushdown);
+
+      if (pushdown)
+      {
+        node->ss.ps.qual = list_delete(node->ss.ps.qual, (void *) state);
+        break;
+      }
+    }
+  }
+
+  /* Execute the query */
+  if (qual_value && pushdown)
+  {
+    appendStringInfo(&query, "(&(%s)%s)", qual_value, (srv_query == NULL ? "" : srv_query));
+  }
+  else
+    appendStringInfo(&query, "%s", (srv_query == NULL ? "(objectClass=*)" : srv_query ));
 
   ldap_result = ldap_search_ext_s(ldap_connection, srv_base_dn, LDAP_SCOPE_ONELEVEL, query.data, NULL, 0, NULL, NULL, NULL, LDAP_NO_LIMIT, &ldap_answer);
 
@@ -542,4 +575,51 @@ _ldap_get_options(Oid foreign_table_id, char **address, int *port, char **ldap_v
   LDAP_FDW_SET_DEFAULT_OPTION(address, (char *) "127.0.0.1");
   LDAP_FDW_SET_DEFAULT_OPTION(port, 389);
   LDAP_FDW_SET_DEFAULT_OPTION(ldap_version, (char *) LDAP_VERSION3);
+}
+
+static void
+_ldap_check_quals(Node *node, TupleDesc tupdesc, char **key, char **value, bool *pushdown)
+{
+  *key = NULL;
+  *value = NULL;
+  *pushdown = false;
+
+  if (!node)
+    return;
+
+  if (IsA(node, OpExpr))
+  {
+    OpExpr *op = (OpExpr *) node;
+    Node *left, *right;
+    Index varattno;
+
+    if (list_length(op->args) != 2)
+      return;
+
+    left = list_nth(op->args, 0);
+
+    if (!IsA(left, Var))
+      return;
+
+    varattno = ((Var *) left)->varattno;
+
+    right = list_nth(op->args, 1);
+
+    if (IsA(right, Const))
+    {
+      StringInfoData  buf;
+
+      initStringInfo(&buf);
+
+      *key = NameStr(tupdesc->attrs[varattno - 1]->attname);
+      *value = TextDatumGetCString(((Const *) right)->constvalue);
+
+      if (op->opfuncid == PROCID_TEXTEQ && strcmp(*key, "dn") == 0)
+        *pushdown = true;
+
+      return;
+    }
+  }
+
+  return;
 }
