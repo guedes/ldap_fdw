@@ -11,7 +11,7 @@ Warnings
 
 * **DO NOT USE IT ON PRODUCTION**: It is not production ready but you could test it in your test
 server and help us to improve it;
-* it not implements filters *yet*, so if you do a `select * from ldap_table` it will fetch all records from LDAP server. Some LDAP servers limits this to 500;
+* it not implements limits *yet*, so if you do a `select * from ldap_table` it will fetch all records from LDAP server. Some LDAP servers limits this to 500;
 * by now it only supports two columns: `dn` and `object_body` where the former is populated with the DN and the last with the LDAP entry converted to a Hstore compatible format;
 
 Description
@@ -76,6 +76,29 @@ And voila!
                                                        | uidNumber => "1001",                                          +
                                                        | uid => "jsmith",                                              +
                                                        | 
+
+If you use a filter on `dn` column `ldap_fdw` will convert it to LDAP dialect and will send it to the server and this one
+will reply less entries. By now, only `dn` has this behaviour.
+
+See:
+
+    > SELECT object_body FROM ldap_people WHERE dn = 'cn=Dickson Guedes';
+
+                              object_body                           
+    ----------------------------------------------------------------
+     cn => "Dickson Guedes",                                       +
+     gidNumber => "500",                                           +
+     homeDirectory => "/home/users/guedes",                        +
+     sn => "Guedes",                                               +
+     loginShell => "/bin/sh",                                      +
+     objectClass => "{\"inetOrgPerson\",\"posixAccount\",\"top\"}",+
+     userPassword => "ldap",                                       +
+     uidNumber => "1000",                                          +
+     uid => "guedes",                                              +
+     givenName => "{\"Dickson, Guedes\",\"Gueduxo\"}",             +
+     
+    (1 row)
+
 # Integration with Hstore
 
 Well, you could do better than just retrieve that `object_body`! What about using [Hstore](http://www.postgresql.org/docs/9.2/static/hstore.html)?
@@ -112,7 +135,7 @@ Yes, you can! See:
      (
         SELECT hstore(object_body) as h
         FROM ldap_people
-        WHERE dn = 'cn=John Smith,ou=people,dc=example,dc=org'
+        WHERE dn = 'cn=John Smith'
      ),
      _user_pass as
      (
