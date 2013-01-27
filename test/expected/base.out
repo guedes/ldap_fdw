@@ -10,31 +10,74 @@ CREATE FOREIGN TABLE ldap_people (
    object_body text
 )
 SERVER ldap_test_server
-OPTIONS (base_dn 'DC=guedesoft,DC=net');
+OPTIONS (base_dn 'ou=people,dc=guedesoft,dc=net');
+CREATE FOREIGN TABLE ldap_john_smith (
+   dn text,
+   object_body text
+)
+SERVER ldap_test_server
+OPTIONS (base_dn 'ou=people,dc=guedesoft,dc=net', query '(cn=John Smith)');
 SELECT * FROM ldap_people WHERE dn = 'cn=admin,dc=guedesoft,dc=net';
-              dn              |                             object_body                             
-------------------------------+---------------------------------------------------------------------
- cn=admin,dc=guedesoft,dc=net | objectClass => "{\"simpleSecurityObject\",\"organizationalRole\"}",+
-                              | cn => "admin",                                                     +
-                              | description => "LDAP administrator",                               +
-                              | userPassword => "{SSHA}W0P/R7GRoqr1sl2JMMnG0TXn1UP1uVn6",          +
-                              | 
+ dn | object_body 
+----+-------------
+(0 rows)
+
+SELECT object_body FROM ldap_people WHERE dn = 'cn=Dickson Guedes,ou=people,dc=guedesoft,dc=net';
+                          object_body                           
+----------------------------------------------------------------
+ cn => "Dickson Guedes",                                       +
+ gidNumber => "500",                                           +
+ homeDirectory => "/home/users/guedes",                        +
+ sn => "Guedes",                                               +
+ loginShell => "/bin/sh",                                      +
+ objectClass => "{\"inetOrgPerson\",\"posixAccount\",\"top\"}",+
+ userPassword => "ldap",                                       +
+ uidNumber => "1000",                                          +
+ uid => "guedes",                                              +
+ givenName => "{\"Dickson, Guedes\",\"Gueduxo\"}",             +
+ 
 (1 row)
 
-SELECT * FROM ldap_people ;
-               dn               |                             object_body                             
---------------------------------+---------------------------------------------------------------------
- cn=admin,dc=guedesoft,dc=net   | objectClass => "{\"simpleSecurityObject\",\"organizationalRole\"}",+
-                                | cn => "admin",                                                     +
-                                | description => "LDAP administrator",                               +
-                                | userPassword => "{SSHA}W0P/R7GRoqr1sl2JMMnG0TXn1UP1uVn6",          +
-                                | 
- ou=people,dc=guedesoft,dc=net  | objectClass => "{\"organizationalUnit\",\"top\"}",                 +
-                                | ou => "people",                                                    +
-                                | 
- cn=usuario,dc=guedesoft,dc=net | gidNumber => "500",                                                +
-                                | cn => "usuario",                                                   +
-                                | objectClass => "{\"posixGroup\",\"top\"}",                         +
-                                | 
-(3 rows)
+SELECT * FROM ldap_people;
+                       dn                        |                          object_body                           
+-------------------------------------------------+----------------------------------------------------------------
+ cn=Dickson Guedes,ou=people,dc=guedesoft,dc=net | cn => "Dickson Guedes",                                       +
+                                                 | gidNumber => "500",                                           +
+                                                 | homeDirectory => "/home/users/guedes",                        +
+                                                 | sn => "Guedes",                                               +
+                                                 | loginShell => "/bin/sh",                                      +
+                                                 | objectClass => "{\"inetOrgPerson\",\"posixAccount\",\"top\"}",+
+                                                 | userPassword => "ldap",                                       +
+                                                 | uidNumber => "1000",                                          +
+                                                 | uid => "guedes",                                              +
+                                                 | givenName => "{\"Dickson, Guedes\",\"Gueduxo\"}",             +
+                                                 | 
+ cn=John Smith,ou=people,dc=guedesoft,dc=net     | gidNumber => "500",                                           +
+                                                 | loginShell => "/bin/sh",                                      +
+                                                 | objectClass => "{\"inetOrgPerson\",\"posixAccount\",\"top\"}",+
+                                                 | uidNumber => "1001",                                          +
+                                                 | cn => "John Smith",                                           +
+                                                 | givenName => "John",                                          +
+                                                 | homeDirectory => "/home/users/jsmith",                        +
+                                                 | sn => "Smith",                                                +
+                                                 | uid => "jsmith",                                              +
+                                                 | userPassword => "{SSHA}mbmIECN8SEUv21FrXxt2Z8Qy7p/LE0EF",     +
+                                                 | 
+(2 rows)
+
+SELECT * FROM ldap_john_smith;
+                     dn                      |                          object_body                           
+---------------------------------------------+----------------------------------------------------------------
+ cn=John Smith,ou=people,dc=guedesoft,dc=net | gidNumber => "500",                                           +
+                                             | loginShell => "/bin/sh",                                      +
+                                             | objectClass => "{\"inetOrgPerson\",\"posixAccount\",\"top\"}",+
+                                             | uidNumber => "1001",                                          +
+                                             | cn => "John Smith",                                           +
+                                             | givenName => "John",                                          +
+                                             | homeDirectory => "/home/users/jsmith",                        +
+                                             | sn => "Smith",                                                +
+                                             | uid => "jsmith",                                              +
+                                             | userPassword => "{SSHA}mbmIECN8SEUv21FrXxt2Z8Qy7p/LE0EF",     +
+                                             | 
+(1 row)
 

@@ -48,6 +48,10 @@
 
 #include <ldap.h>
 
+#define LDAP_FDW_SET_OPTION(op, value) if (strcmp(def->defname, value) == 0) *op = defGetString(def)
+#define LDAP_FDW_SET_OPTION_INT(op, value) if (strcmp(def->defname, value) == 0) *op = atoi(defGetString(def))
+#define LDAP_FDW_SET_DEFAULT_OPTION(op, value) if (!*op) *op = value
+
 extern LDAP *ldap_init(char *, int);
 extern int ldap_simple_bind_s(LDAP *, const char *, const char *);
 extern char **ldap_get_values(LDAP *, LDAPMessage *, char *);
@@ -74,6 +78,7 @@ static struct LdapFdwOption valid_options[] =
   {"user_dn",   UserMappingRelationId },
   {"password",  UserMappingRelationId },
   {"base_dn",   ForeignTableRelationId},
+  {"query",     ForeignTableRelationId},
 
   {NULL,        InvalidOid}
 };
@@ -159,10 +164,10 @@ ldapAnalyzeForeignTable(Relation relation,
 /*
  * Helper functions
  */
-static void get_str_attributes(char *attributes[], Relation relation);
-static int  name_str_case_cmp(Name name, const char *str);
-static bool is_valid_option(const char *option, Oid context);
-static void ldap_get_options(Oid foreign_table_id, char **address, int *port, char **ldap_version, char **user_dn, char **password, char **base_dn);
+static void _get_str_attributes(char *attributes[], Relation relation);
+static int  _name_str_case_cmp(Name name, const char *str);
+static bool _is_valid_option(const char *option, Oid context);
+static void _ldap_get_options(Oid foreign_table_id, char **address, int *port, char **ldap_version, char **user_dn, char **password, char **base_dn, char **query);
 
 /*
  * FDW functions implementation
@@ -197,7 +202,7 @@ ldap_fdw_validator(PG_FUNCTION_ARGS)
   {
     DefElem    *def = (DefElem *) lfirst(cell);
 
-    if (!is_valid_option(def->defname, catalog))
+    if (!_is_valid_option(def->defname, catalog))
     {
       struct LdapFdwOption *opt;
       StringInfoData buf;
@@ -284,20 +289,21 @@ ldapBeginForeignScan(ForeignScanState *node, int eflags)
   char                    *srv_user_dn = NULL;
   char                    *srv_password = NULL;
   char                    *srv_base_dn = NULL;
+  char                    *srv_query = NULL;
 
   LDAP                    *ldap_connection;
   LDAPMessage             *ldap_answer;
   int                     ldap_result;
 
   LdapFdwExecutionState   *festate;
-  char                    *query;
+  StringInfoData          query;
 
   if (eflags & EXEC_FLAG_EXPLAIN_ONLY)
     return;
 
-  ldap_get_options(RelationGetRelid(node->ss.ss_currentRelation),
+  _ldap_get_options(RelationGetRelid(node->ss.ss_currentRelation),
            &srv_address, &srv_port, &srv_ldap_version,
-           &srv_user_dn, &srv_password, &srv_base_dn);
+           &srv_user_dn, &srv_password, &srv_base_dn, &srv_query);
 
   ldap_connection = ldap_init(srv_address, srv_port);
 
@@ -323,22 +329,22 @@ ldapBeginForeignScan(ForeignScanState *node, int eflags)
          errmsg("failed to authenticate to LDAP server using user_dn: %s. LDAP ERROR: %s", srv_user_dn, ldap_err2string(ldap_result))
         ));
 
-  query = (char *) palloc(1024);
-  snprintf(query, 1024, "(&(objectClass=*))");
+  initStringInfo(&query);
+  appendStringInfo(&query, "%s", (srv_query == NULL ? "(objectClass=*)" : srv_query ));
 
-  ldap_result = ldap_search_ext_s(ldap_connection, srv_base_dn, LDAP_SCOPE_ONELEVEL, query, NULL, 0, NULL, NULL, NULL, LDAP_NO_LIMIT, &ldap_answer);
+  ldap_result = ldap_search_ext_s(ldap_connection, srv_base_dn, LDAP_SCOPE_ONELEVEL, query.data, NULL, 0, NULL, NULL, NULL, LDAP_NO_LIMIT, &ldap_answer);
 
   if (ldap_result != LDAP_SUCCESS)
     ereport(ERROR,
         (errcode(ERRCODE_FDW_UNABLE_TO_CREATE_EXECUTION),
-         errmsg("failed to execute the LDAP search '%s' on base_dn '%s'. LDAP ERROR: %s", query, srv_base_dn, ldap_err2string(ldap_result))
+         errmsg("failed to execute the LDAP search '%s' on base_dn '%s'. LDAP ERROR: %s", query.data, srv_base_dn, ldap_err2string(ldap_result))
         ));
 
   festate = (LdapFdwExecutionState *) palloc(sizeof(LdapFdwExecutionState));
 
   festate->ldap_connection = ldap_connection;
   festate->base_dn = srv_base_dn;
-  festate->query = query;
+  festate->query = query.data;
   festate->row = 0;
   festate->ldap_entry = ldap_first_entry(ldap_connection, ldap_answer);
   festate->att_in_metadata = TupleDescGetAttInMetadata(node->ss.ss_currentRelation->rd_att);
@@ -447,7 +453,7 @@ ldapEndForeignScan(ForeignScanState *node)
  * is the attribute name. The array is null-terminated
  */
 static void
-get_str_attributes(char *attributes[], Relation relation)
+_get_str_attributes(char *attributes[], Relation relation)
 {
   int total_attributes = relation->rd_att->natts;
   int i;
@@ -466,7 +472,7 @@ get_str_attributes(char *attributes[], Relation relation)
  * The string could or not be null-terminated.
  */
 static int
-name_str_case_cmp(Name name, const char *str)
+_name_str_case_cmp(Name name, const char *str)
 {
   if (!name && !str)
     return 0;
@@ -482,7 +488,7 @@ name_str_case_cmp(Name name, const char *str)
  * context is the Oid of the catalog holding the object the option is for.
  */
 static bool
-is_valid_option(const char *option, Oid context)
+_is_valid_option(const char *option, Oid context)
 {
   struct LdapFdwOption *opt;
 
@@ -498,7 +504,7 @@ is_valid_option(const char *option, Oid context)
  * Fetch the options for a ldap_fdw foreign table.
  */
 static void
-ldap_get_options(Oid foreign_table_id, char **address, int *port, char **ldap_version, char **user_dn, char **password, char **base_dn)
+_ldap_get_options(Oid foreign_table_id, char **address, int *port, char **ldap_version, char **user_dn, char **password, char **base_dn, char **query)
 {
   ForeignTable  *f_table;
   ForeignServer *f_server;
@@ -522,31 +528,18 @@ ldap_get_options(Oid foreign_table_id, char **address, int *port, char **ldap_ve
   {
     DefElem *def = (DefElem *) lfirst(lc);
 
-    if (strcmp(def->defname, "address") == 0)
-      *address = defGetString(def);
+    LDAP_FDW_SET_OPTION(address, "address");
+    LDAP_FDW_SET_OPTION_INT(port, "port");
+    LDAP_FDW_SET_OPTION(user_dn, "user_dn");
+    LDAP_FDW_SET_OPTION(password, "password");
+    LDAP_FDW_SET_OPTION(ldap_version, "ldap_version");
+    LDAP_FDW_SET_OPTION(base_dn, "base_dn");
+    LDAP_FDW_SET_OPTION(query, "query");
 
-    if (strcmp(def->defname, "port") == 0)
-      *port = atoi(defGetString(def));
-
-    if (strcmp(def->defname, "ldap_version") == 0)
-      *ldap_version = defGetString(def);
-
-    if (strcmp(def->defname, "user_dn") == 0)
-      *user_dn = defGetString(def);
-
-    if (strcmp(def->defname, "password") == 0)
-      *password = defGetString(def);
-
-    if (strcmp(def->defname, "base_dn") == 0)
-      *base_dn = defGetString(def);
   }
 
   /* Default values, if required */
-  if (!*address)
-    *address = "127.0.0.1";
-
-  if (!*port)
-    *port = 389;
-
-  *ldap_version = (char *) LDAP_VERSION3;
+  LDAP_FDW_SET_DEFAULT_OPTION(address, (char *) "127.0.0.1");
+  LDAP_FDW_SET_DEFAULT_OPTION(port, 389);
+  LDAP_FDW_SET_DEFAULT_OPTION(ldap_version, (char *) LDAP_VERSION3);
 }
