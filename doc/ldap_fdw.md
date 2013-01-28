@@ -157,7 +157,7 @@ Yes, you can! See:
      t
     (1 row)
 
-Well to verbose, but you could use a function, no? :)
+Well too verbose, but you could use a function, no? :)
 
 Support
 -------
