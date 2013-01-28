@@ -32,8 +32,7 @@ To install the build dependencies on RedHat based systems:
 
     yum install make postgresql92-devel gcc openldap-devel
 
-The postgres92-devel package can be found in the PostgreSQL YUM Repository: http://yum.postgresql.org/
-Compiling against 9.2 on RHEL6 is not yet supported.
+The postgres92-devel package can be found in the PostgreSQL YUM Repository: http://yum.postgresql.org/.
 
 To install the build dependencies on Debian based systems:
 
