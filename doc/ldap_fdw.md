@@ -99,6 +99,24 @@ See:
      
     (1 row)
 
+## Retrieving specific attributes
+
+You can choose a list of attributes to retrieve, just add an option `attributes` to FOREIGN TABLE's options with 
+a comma-separeted attributes like this:
+
+    ALTER FOREIGN TABLE ldap_people
+    OPTIONS ( ADD attributes 'gidNumber,uidNumber,homeDirectory' );
+
+    SELECT * FROM ldap_people WHERE dn = 'cn=John Smith';
+
+                         dn                      |              object_body               
+    ---------------------------------------------+----------------------------------------
+     cn=John Smith,ou=people,dc=guedesoft,dc=net | gidNumber => "500",                   +
+                                                 | uidNumber => "1001",                  +
+                                                 | homeDirectory => "/home/users/jsmith",+
+                                                 | 
+    (1 row)
+
 # Integration with Hstore
 
 Well, you could do better than just retrieve that `object_body`! What about using [Hstore](http://www.postgresql.org/docs/9.2/static/hstore.html)?

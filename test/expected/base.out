@@ -81,3 +81,14 @@ SELECT * FROM ldap_john_smith;
                                              | 
 (1 row)
 
+ALTER FOREIGN TABLE ldap_john_smith
+OPTIONS ( ADD attributes 'gidNumber,uidNumber,homeDirectory,nonExistant' );
+SELECT * FROM ldap_john_smith;
+                     dn                      |              object_body               
+---------------------------------------------+----------------------------------------
+ cn=John Smith,ou=people,dc=guedesoft,dc=net | gidNumber => "500",                   +
+                                             | uidNumber => "1001",                  +
+                                             | homeDirectory => "/home/users/jsmith",+
+                                             | 
+(1 row)
+

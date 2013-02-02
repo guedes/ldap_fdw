@@ -53,17 +53,18 @@
 
 
 #define PROCID_TEXTEQ 67
-
+#define MAX_ARGS 100
 
 #define LDAP_FDW_OPTION_ADDRESS       "address"
-#define LDAP_FDW_OPTION_PORT          "port" 
-#define LDAP_FDW_OPTION_USER_DN       "user_dn" 
-#define LDAP_FDW_OPTION_PASSWORD      "password" 
-#define LDAP_FDW_OPTION_BASE_DN       "base_dn" 
-#define LDAP_FDW_OPTION_QUERY         "query" 
-#define LDAP_FDW_OPTION_LDAP_VERSION  "ldap_version" 
+#define LDAP_FDW_OPTION_PORT          "port"
+#define LDAP_FDW_OPTION_USER_DN       "user_dn"
+#define LDAP_FDW_OPTION_PASSWORD      "password"
+#define LDAP_FDW_OPTION_ATTRIBUTES    "attributes"
+#define LDAP_FDW_OPTION_BASE_DN       "base_dn"
+#define LDAP_FDW_OPTION_QUERY         "query"
+#define LDAP_FDW_OPTION_LDAP_VERSION  "ldap_version"
 
-#define LDAP_FDW_OPTION_ADDRESS_DEFAULT     (char *) "127.0.0.1" 
+#define LDAP_FDW_OPTION_ADDRESS_DEFAULT     (char *) "127.0.0.1"
 #define LDAP_FDW_OPTION_PORT_DEFAULT        389
 #define LDAP_FDW_OPTION_USER_DN_DEFAULT     (char *) "cn=admin,dc=example,dc=org"
 #define LDAP_FDW_OPTION_PASSWORD_DEFAULT    (char *) "admin"
@@ -94,6 +95,7 @@ static struct LdapFdwOption valid_options[] =
   {"port",      ForeignServerRelationId },
   {"user_dn",   UserMappingRelationId },
   {"password",  UserMappingRelationId },
+  {"attributes",ForeignTableRelationId},
   {"base_dn",   ForeignTableRelationId},
   {"query",     ForeignTableRelationId},
 
@@ -175,5 +177,6 @@ ldapAnalyzeForeignTable(Relation relation,
 static void _get_str_attributes(char *attributes[], Relation relation);
 static int  _name_str_case_cmp(Name name, const char *str);
 static bool _is_valid_option(const char *option, Oid context);
-static void _ldap_get_options(Oid foreign_table_id, char **address, int *port, char **ldap_version, char **user_dn, char **password, char **base_dn, char **query);
+static void _ldap_get_options(Oid foreign_table_id, char **address, int *port, char **ldap_version, char **user_dn, char **password, char **base_dn, char **query, char **attributes);
 static void _ldap_check_quals(Node *, TupleDesc, char **, char **, bool *);
+static char ** _string_to_array(char *);

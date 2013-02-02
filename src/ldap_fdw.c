@@ -144,6 +144,7 @@ ldapBeginForeignScan(ForeignScanState *node, int eflags)
   char                    *srv_ldap_version = NULL;
   char                    *srv_user_dn = NULL;
   char                    *srv_password = NULL;
+  char                    *srv_attributes = NULL;
   char                    *srv_base_dn = NULL;
   char                    *srv_query = NULL;
 
@@ -163,7 +164,7 @@ ldapBeginForeignScan(ForeignScanState *node, int eflags)
 
   _ldap_get_options(RelationGetRelid(node->ss.ss_currentRelation),
            &srv_address, &srv_port, &srv_ldap_version,
-           &srv_user_dn, &srv_password, &srv_base_dn, &srv_query);
+           &srv_user_dn, &srv_password, &srv_base_dn, &srv_query, &srv_attributes);
 
   ldap_connection = ldap_init(srv_address, srv_port);
 
@@ -218,7 +219,7 @@ ldapBeginForeignScan(ForeignScanState *node, int eflags)
   else
     appendStringInfo(&query, "%s", (srv_query == NULL ? "(objectClass=*)" : srv_query ));
 
-  ldap_result = ldap_search_ext_s(ldap_connection, srv_base_dn, LDAP_SCOPE_ONELEVEL, query.data, NULL, 0, NULL, NULL, NULL, LDAP_NO_LIMIT, &ldap_answer);
+  ldap_result = ldap_search_ext_s(ldap_connection, srv_base_dn, LDAP_SCOPE_ONELEVEL, query.data, _string_to_array(srv_attributes), 0, NULL, NULL, NULL, LDAP_NO_LIMIT, &ldap_answer);
 
   if (ldap_result != LDAP_SUCCESS)
     ereport(ERROR,
@@ -390,7 +391,7 @@ _is_valid_option(const char *option, Oid context)
  * Fetch the options for a ldap_fdw foreign table.
  */
 static void
-_ldap_get_options(Oid foreign_table_id, char **address, int *port, char **ldap_version, char **user_dn, char **password, char **base_dn, char **query)
+_ldap_get_options(Oid foreign_table_id, char **address, int *port, char **ldap_version, char **user_dn, char **password, char **base_dn, char **query, char **attributes)
 {
   ForeignTable  *f_table;
   ForeignServer *f_server;
@@ -419,6 +420,7 @@ _ldap_get_options(Oid foreign_table_id, char **address, int *port, char **ldap_v
     LDAP_FDW_SET_OPTION(user_dn, "user_dn");
     LDAP_FDW_SET_OPTION(password, "password");
     LDAP_FDW_SET_OPTION(ldap_version, "ldap_version");
+    LDAP_FDW_SET_OPTION(attributes, "attributes");
     LDAP_FDW_SET_OPTION(base_dn, "base_dn");
     LDAP_FDW_SET_OPTION(query, "query");
 
@@ -475,4 +477,31 @@ _ldap_check_quals(Node *node, TupleDesc tupdesc, char **key, char **value, bool 
   }
 
   return;
+}
+
+/*
+ *
+ * FIXME: Weird by now, should change
+ *
+ */
+static char **
+_string_to_array(char * str)
+{
+  char delims[] = " ,\t\n\r";
+  static char *res[MAX_ARGS];
+  char *token;
+  int j = 0;
+
+  if (str == NULL)
+    return NULL;
+
+  token = strtok(str, delims);
+
+  while( token != NULL)
+  {
+    res[j++] = strdup(token);
+    token = strtok(NULL, delims);
+  }
+
+  return res;
 }

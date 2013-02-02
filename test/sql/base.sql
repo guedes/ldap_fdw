@@ -26,3 +26,8 @@ SELECT * FROM ldap_people WHERE dn = 'cn=admin';
 SELECT object_body FROM ldap_people WHERE dn = 'cn=Dickson Guedes';
 SELECT * FROM ldap_people;
 SELECT * FROM ldap_john_smith;
+
+ALTER FOREIGN TABLE ldap_john_smith
+OPTIONS ( ADD attributes 'gidNumber,uidNumber,homeDirectory,nonExistant' );
+
+SELECT * FROM ldap_john_smith;
