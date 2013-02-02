@@ -12,101 +12,9 @@
  *-------------------------------------------------------------------------
  */
 
-#include "postgres.h"
-
-#if PG_VERSION_NUM < 90200
-#error wrong Postgresql version, 9.2.x is required
-#endif
-
-#include "funcapi.h"
-#include "access/reloptions.h"
-#include "catalog/pg_foreign_table.h"
-#include "catalog/pg_foreign_server.h"
-#include "catalog/pg_user_mapping.h"
-/*
-  #include "catalog/pg_type.h"
-*/
-#include "commands/defrem.h"
-#include "commands/explain.h"
-#include "foreign/fdwapi.h"
-#include "foreign/foreign.h"
-#include "miscadmin.h"
-/*
-  #include "mb/pg_wchar.h"
-  #include "nodes/makefuncs.h"
-*/
-#include "optimizer/cost.h"
-#include "optimizer/pathnode.h"
-#include "optimizer/planmain.h"
-#include "optimizer/restrictinfo.h"
-/*
-  #include "storage/fd.h"
-  #include "utils/array.h"
-*/
-#include "utils/builtins.h"
-#include "utils/rel.h"
-
-#include <ldap.h>
-
-#define LDAP_FDW_SET_OPTION(op, value) if (strcmp(def->defname, value) == 0) *op = defGetString(def)
-#define LDAP_FDW_SET_OPTION_INT(op, value) if (strcmp(def->defname, value) == 0) *op = atoi(defGetString(def))
-#define LDAP_FDW_SET_DEFAULT_OPTION(op, value) if (!*op) *op = value
-
-#define PROCID_TEXTEQ 67
-
-extern LDAP *ldap_init(char *, int);
-extern int ldap_simple_bind_s(LDAP *, const char *, const char *);
-extern char **ldap_get_values(LDAP *, LDAPMessage *, char *);
-extern int ldap_count_values(char **);
-extern void ldap_value_free(char **);
-extern int ldap_unbind(LDAP *);
+#include "ldap_fdw.h"
 
 PG_MODULE_MAGIC;
-
-/*
- * Valid options that could be used by
- * this wrapper
- */
-typedef struct LdapFdwOption
-{
-  const char *option_name;
-  Oid        option_context;
-} LdapFdwOption;
-
-static struct LdapFdwOption valid_options[] =
-{
-  {"address",   ForeignServerRelationId },
-  {"port",      ForeignServerRelationId },
-  {"user_dn",   UserMappingRelationId },
-  {"password",  UserMappingRelationId },
-  {"base_dn",   ForeignTableRelationId},
-  {"query",     ForeignTableRelationId},
-
-  {NULL,        InvalidOid}
-};
-
-/*
- * Stores the FDW execution state
- */
-typedef struct
-{
-  LDAP          *ldap_connection;
-  LDAPMessage   *ldap_answer;
-  LDAPMessage   *ldap_entry;
-  BerElement    *ldap_ber;
-
-  AttInMetadata *att_in_metadata;
-
-  char          *address;
-  int           port;
-  char          *ldap_version;
-  char          *user_dn;
-  char          *password;
-  char          *base_dn;
-  char          *query;
-
-  int           row;
-} LdapFdwExecutionState;
 
 /*
  * Handler and Validator functions
@@ -116,61 +24,6 @@ extern Datum ldap_fdw_validator(PG_FUNCTION_ARGS);
 
 PG_FUNCTION_INFO_V1(ldap_fdw_handler);
 PG_FUNCTION_INFO_V1(ldap_fdw_validator);
-
-/*
- * FDW functions declarations
- */
-
-static void
-ldapGetForeignRelSize(PlannerInfo *root,
-                      RelOptInfo *baserel,
-                      Oid foreigntableid);
-
-static void
-ldapGetForeignPaths(PlannerInfo *root,
-                    RelOptInfo *baserel,
-                    Oid foreigntableid);
-
-static ForeignScan *
-ldapGetForeignPlan(PlannerInfo *root,
-                   RelOptInfo *baserel,
-                   Oid foreigntableid,
-                   ForeignPath *best_path,
-                   List *tlist,
-                   List *scan_clauses);
-
-static void
-ldapExplainForeignScan(ForeignScanState *node,
-                       ExplainState *es);
-
-static void
-ldapBeginForeignScan(ForeignScanState *node,
-                     int eflags);
-
-static TupleTableSlot *
-ldapIterateForeignScan(ForeignScanState *node);
-
-static void
-ldapReScanForeignScan(ForeignScanState *node);
-
-static void
-ldapEndForeignScan(ForeignScanState *node);
-
-/*
-static bool
-ldapAnalyzeForeignTable(Relation relation,
-                    AcquireSampleRowsFunc *func,
-                    BlockNumber *totalpages);
-*/
-
-/*
- * Helper functions
- */
-static void _get_str_attributes(char *attributes[], Relation relation);
-static int  _name_str_case_cmp(Name name, const char *str);
-static bool _is_valid_option(const char *option, Oid context);
-static void _ldap_get_options(Oid foreign_table_id, char **address, int *port, char **ldap_version, char **user_dn, char **password, char **base_dn, char **query);
-static void _ldap_check_quals(Node *, TupleDesc, char **, char **, bool *);
 
 /*
  * FDW functions implementation
@@ -572,9 +425,9 @@ _ldap_get_options(Oid foreign_table_id, char **address, int *port, char **ldap_v
   }
 
   /* Default values, if required */
-  LDAP_FDW_SET_DEFAULT_OPTION(address, (char *) "127.0.0.1");
-  LDAP_FDW_SET_DEFAULT_OPTION(port, 389);
-  LDAP_FDW_SET_DEFAULT_OPTION(ldap_version, (char *) LDAP_VERSION3);
+  LDAP_FDW_SET_DEFAULT_OPTION(address,      LDAP_FDW_OPTION_ADDRESS_DEFAULT);
+  LDAP_FDW_SET_DEFAULT_OPTION(port,         LDAP_FDW_OPTION_PORT_DEFAULT);
+  LDAP_FDW_SET_DEFAULT_OPTION(ldap_version, LDAP_FDW_OPTION_LDAP_VERSION_DEFAULT);
 }
 
 static void
