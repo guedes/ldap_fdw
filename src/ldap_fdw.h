@@ -47,11 +47,6 @@
 
 #include <ldap.h>
 
-#define LDAP_FDW_SET_OPTION(op, value) if (strcmp(def->defname, value) == 0) *op = defGetString(def)
-#define LDAP_FDW_SET_OPTION_INT(op, value) if (strcmp(def->defname, value) == 0) *op = atoi(defGetString(def))
-#define LDAP_FDW_SET_DEFAULT_OPTION(op, value) if (!*op) *op = value
-
-
 #define PROCID_TEXTEQ 67
 #define MAX_ARGS 100
 
@@ -66,11 +61,8 @@
 
 #define LDAP_FDW_OPTION_ADDRESS_DEFAULT     (char *) "127.0.0.1"
 #define LDAP_FDW_OPTION_PORT_DEFAULT        389
-#define LDAP_FDW_OPTION_USER_DN_DEFAULT     (char *) "cn=admin,dc=example,dc=org"
-#define LDAP_FDW_OPTION_PASSWORD_DEFAULT    (char *) "admin"
-#define LDAP_FDW_OPTION_BASE_DN_DEFAULT     (char *) "dc=example,dc=org"
 #define LDAP_FDW_OPTION_QUERY_DEFAULT       (char *) "(objectClass=*)"
-#define LDAP_FDW_OPTION_LDAP_VERSION_DEFAULT  (char *) LDAP_VERSION3
+#define LDAP_FDW_OPTION_LDAP_VERSION_DEFAULT  LDAP_VERSION3
 
 extern LDAP *ldap_init(char *, int);
 extern int ldap_simple_bind_s(LDAP *, const char *, const char *);
@@ -102,27 +94,34 @@ static struct LdapFdwOption valid_options[] =
   {NULL,        InvalidOid}
 };
 
+typedef struct
+{
+  char          *address;
+  int           port;
+  int           ldap_version;
+  char          *user_dn;
+  char          *password;
+  char          *attributes;
+  char          *base_dn;
+  char          *query;
+} LdapFdwConfiguration;
+
 /*
  * Stores the FDW execution state
  */
 typedef struct
 {
-  LDAP          *ldap_connection;
-  LDAPMessage   *ldap_answer;
-  LDAPMessage   *ldap_entry;
-  BerElement    *ldap_ber;
+  LDAP                 *ldap_connection;
+  LDAPMessage          *ldap_answer;
+  LDAPMessage          *ldap_entry;
+  BerElement           *ldap_ber;
 
-  AttInMetadata *att_in_metadata;
+  AttInMetadata        *att_in_metadata;
 
-  char          *address;
-  int           port;
-  char          *ldap_version;
-  char          *user_dn;
-  char          *password;
-  char          *base_dn;
-  char          *query;
+  int                  row;
 
-  int           row;
+  LdapFdwConfiguration *config;
+
 } LdapFdwExecutionState;
 
 /*
@@ -174,9 +173,9 @@ ldapAnalyzeForeignTable(Relation relation,
 /*
  * Helper functions
  */
-static void _get_str_attributes(char *attributes[], Relation relation);
-static int  _name_str_case_cmp(Name name, const char *str);
-static bool _is_valid_option(const char *option, Oid context);
-static void _ldap_get_options(Oid foreign_table_id, char **address, int *port, char **ldap_version, char **user_dn, char **password, char **base_dn, char **query, char **attributes);
+static void _get_str_attributes(char *attributes[], Relation);
+static int  _name_str_case_cmp(Name, const char *);
+static bool _is_valid_option(const char *, Oid);
+static void _ldap_get_options(Oid, LdapFdwConfiguration *);
 static void _ldap_check_quals(Node *, TupleDesc, char **, char **, bool *);
 static char ** _string_to_array(char *);

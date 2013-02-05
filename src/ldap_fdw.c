@@ -139,15 +139,6 @@ ldapExplainForeignScan(ForeignScanState *node, ExplainState *es)
 static void
 ldapBeginForeignScan(ForeignScanState *node, int eflags)
 {
-  char                    *srv_address = NULL;
-  int                     srv_port = 0;
-  char                    *srv_ldap_version = NULL;
-  char                    *srv_user_dn = NULL;
-  char                    *srv_password = NULL;
-  char                    *srv_attributes = NULL;
-  char                    *srv_base_dn = NULL;
-  char                    *srv_query = NULL;
-
   LDAP                    *ldap_connection;
   LDAPMessage             *ldap_answer;
   int                     ldap_result;
@@ -157,37 +148,38 @@ ldapBeginForeignScan(ForeignScanState *node, int eflags)
   bool                    pushdown = false;
 
   LdapFdwExecutionState   *festate;
+  LdapFdwConfiguration    *config;
   StringInfoData          query;
 
   if (eflags & EXEC_FLAG_EXPLAIN_ONLY)
     return;
 
-  _ldap_get_options(RelationGetRelid(node->ss.ss_currentRelation),
-           &srv_address, &srv_port, &srv_ldap_version,
-           &srv_user_dn, &srv_password, &srv_base_dn, &srv_query, &srv_attributes);
+  config = (LdapFdwConfiguration *) palloc(sizeof(LdapFdwConfiguration));
 
-  ldap_connection = ldap_init(srv_address, srv_port);
+  _ldap_get_options(RelationGetRelid(node->ss.ss_currentRelation), config);
+
+  ldap_connection = ldap_init(config->address, config->port);
 
   if (ldap_connection == NULL)
     ereport(ERROR,
         (errcode(ERRCODE_FDW_UNABLE_TO_ESTABLISH_CONNECTION),
-         errmsg("failed to create LDAP handler for address '%s' on port '%d'", srv_address, srv_port)
+         errmsg("failed to create LDAP handler for address '%s' on port '%d'", config->address, config->port)
         ));
 
-  ldap_result = ldap_set_option(ldap_connection, LDAP_OPT_PROTOCOL_VERSION, &srv_ldap_version);
+  ldap_result = ldap_set_option(ldap_connection, LDAP_OPT_PROTOCOL_VERSION, &config->ldap_version);
 
   if (ldap_result != LDAP_SUCCESS)
     ereport(ERROR,
         (errcode(ERRCODE_FDW_UNABLE_TO_ESTABLISH_CONNECTION),
-         errmsg("failed to set version 3 for LDAP server on address '%s' port '%d'. LDAP ERROR: %s", srv_address, srv_port, ldap_err2string(ldap_result))
+         errmsg("failed to set version 3 for LDAP server on address '%s' port '%d'. LDAP ERROR: %s", config->address, config->port, ldap_err2string(ldap_result))
         ));
 
-  ldap_result = ldap_simple_bind_s(ldap_connection, srv_user_dn, srv_password );
+  ldap_result = ldap_simple_bind_s(ldap_connection, config->user_dn, config->password );
 
   if (ldap_result != LDAP_SUCCESS)
     ereport(ERROR,
         (errcode(ERRCODE_FDW_UNABLE_TO_ESTABLISH_CONNECTION),
-         errmsg("failed to authenticate to LDAP server using user_dn: %s. LDAP ERROR: %s", srv_user_dn, ldap_err2string(ldap_result))
+         errmsg("failed to authenticate to LDAP server using user_dn: %s. LDAP ERROR: %s", config->user_dn, ldap_err2string(ldap_result))
         ));
 
   initStringInfo(&query);
@@ -214,27 +206,27 @@ ldapBeginForeignScan(ForeignScanState *node, int eflags)
   /* Execute the query */
   if (qual_value && pushdown)
   {
-    appendStringInfo(&query, "(&(%s)%s)", qual_value, (srv_query == NULL ? "" : srv_query));
+    appendStringInfo(&query, "(&(%s)%s)", qual_value, (config->query == NULL ? "" : config->query));
   }
   else
-    appendStringInfo(&query, "%s", (srv_query == NULL ? "(objectClass=*)" : srv_query ));
+    appendStringInfo(&query, "%s", (config->query == NULL ? "(objectClass=*)" : config->query ));
 
-  ldap_result = ldap_search_ext_s(ldap_connection, srv_base_dn, LDAP_SCOPE_ONELEVEL, query.data, _string_to_array(srv_attributes), 0, NULL, NULL, NULL, LDAP_NO_LIMIT, &ldap_answer);
+  ldap_result = ldap_search_ext_s(ldap_connection, config->base_dn, LDAP_SCOPE_ONELEVEL, query.data, _string_to_array(config->attributes), 0, NULL, NULL, NULL, LDAP_NO_LIMIT, &ldap_answer);
 
   if (ldap_result != LDAP_SUCCESS)
     ereport(ERROR,
         (errcode(ERRCODE_FDW_UNABLE_TO_CREATE_EXECUTION),
-         errmsg("failed to execute the LDAP search '%s' on base_dn '%s'. LDAP ERROR: %s", query.data, srv_base_dn, ldap_err2string(ldap_result))
+         errmsg("failed to execute the LDAP search '%s' on base_dn '%s'. LDAP ERROR: %s", query.data, config->base_dn, ldap_err2string(ldap_result))
         ));
 
-  festate = (LdapFdwExecutionState *) palloc(sizeof(LdapFdwExecutionState));
+  config->query = query.data;
 
+  festate = (LdapFdwExecutionState *) palloc(sizeof(LdapFdwExecutionState));
   festate->ldap_connection = ldap_connection;
-  festate->base_dn = srv_base_dn;
-  festate->query = query.data;
   festate->row = 0;
   festate->ldap_entry = ldap_first_entry(ldap_connection, ldap_answer);
   festate->att_in_metadata = TupleDescGetAttInMetadata(node->ss.ss_currentRelation->rd_att);
+  festate->config = config;
 
   node->fdw_state = (void *) festate;
 }
@@ -391,7 +383,7 @@ _is_valid_option(const char *option, Oid context)
  * Fetch the options for a ldap_fdw foreign table.
  */
 static void
-_ldap_get_options(Oid foreign_table_id, char **address, int *port, char **ldap_version, char **user_dn, char **password, char **base_dn, char **query, char **attributes)
+_ldap_get_options(Oid foreign_table_id, LdapFdwConfiguration *config)
 {
   ForeignTable  *f_table;
   ForeignServer *f_server;
@@ -411,25 +403,35 @@ _ldap_get_options(Oid foreign_table_id, char **address, int *port, char **ldap_v
   options   = list_concat(options, f_server->options);
   options   = list_concat(options, f_mapping->options);
 
+  config->address       = LDAP_FDW_OPTION_ADDRESS_DEFAULT;
+  config->port          = LDAP_FDW_OPTION_PORT_DEFAULT;
+  config->ldap_version  = LDAP_FDW_OPTION_LDAP_VERSION_DEFAULT;
+  config->user_dn       = NULL;
+  config->password      = NULL;
+  config->attributes    = NULL;
+  config->base_dn       = NULL;
+  config->query         = NULL;
+
   foreach(lc, options)
   {
     DefElem *def = (DefElem *) lfirst(lc);
 
-    LDAP_FDW_SET_OPTION(address, "address");
-    LDAP_FDW_SET_OPTION_INT(port, "port");
-    LDAP_FDW_SET_OPTION(user_dn, "user_dn");
-    LDAP_FDW_SET_OPTION(password, "password");
-    LDAP_FDW_SET_OPTION(ldap_version, "ldap_version");
-    LDAP_FDW_SET_OPTION(attributes, "attributes");
-    LDAP_FDW_SET_OPTION(base_dn, "base_dn");
-    LDAP_FDW_SET_OPTION(query, "query");
+    if (strcmp(def->defname, LDAP_FDW_OPTION_ADDRESS) == 0)
+      config->address = defGetString(def);
+    else if (strcmp(def->defname, LDAP_FDW_OPTION_PORT) == 0)
+      config->port = atoi(defGetString(def));
+    else if (strcmp(def->defname, LDAP_FDW_OPTION_USER_DN) == 0)
+      config->user_dn = defGetString(def);
+    else if (strcmp(def->defname, LDAP_FDW_OPTION_PASSWORD) == 0)
+      config->password = defGetString(def);
+    else if (strcmp(def->defname, LDAP_FDW_OPTION_ATTRIBUTES) == 0)
+      config->attributes = defGetString(def);
+    else if (strcmp(def->defname, LDAP_FDW_OPTION_BASE_DN) == 0)
+      config->base_dn = defGetString(def);
+    else if (strcmp(def->defname, LDAP_FDW_OPTION_QUERY) == 0)
+      config->query = defGetString(def);
 
   }
-
-  /* Default values, if required */
-  LDAP_FDW_SET_DEFAULT_OPTION(address,      LDAP_FDW_OPTION_ADDRESS_DEFAULT);
-  LDAP_FDW_SET_DEFAULT_OPTION(port,         LDAP_FDW_OPTION_PORT_DEFAULT);
-  LDAP_FDW_SET_DEFAULT_OPTION(ldap_version, LDAP_FDW_OPTION_LDAP_VERSION_DEFAULT);
 }
 
 static void
