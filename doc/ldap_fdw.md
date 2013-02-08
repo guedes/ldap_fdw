@@ -37,7 +37,7 @@ Create user mapping:
 
     CREATE USER MAPPING FOR current_user
     SERVER ldap_myldap_server
-    OPTIONS (user_dn 'cn=SomeUser,dc=example,dc=com', password 'the_user_password');
+    OPTIONS (user_dn 'cn=SomeUser,dc=example,dc=net', password 'the_user_password');
 
 Finally create a foreign table with a base DN pointing to some OU:
 
@@ -46,7 +46,7 @@ Finally create a foreign table with a base DN pointing to some OU:
        object_body text
     )
     SERVER ldap_myldap_server
-    OPTIONS (base_dn 'OU=people,DC=example,DC=com');
+    OPTIONS (base_dn 'OU=people,DC=example,DC=net');
 
 And voila!
 
