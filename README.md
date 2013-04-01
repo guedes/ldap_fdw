@@ -7,7 +7,7 @@ to query LDAP servers.
 By all means use it, but do so entirely at your own risk! You have been
 warned!
 
-Do you like to use it in production? **DO NOT USE IT ON PRODUCTION** without
+Do you like to use it in production? **USE IT WITH CAUTION** and do
 a ton of tests before.
 
 Please help us to improve and test it and turn it production-ready!
