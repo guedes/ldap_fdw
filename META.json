@@ -2,7 +2,7 @@
    "name": "ldap_fdw",
    "abstract": "LDAP Foreign Data Wrapper for PostgreSQL 9.2",
    "description": "LDAP Foreign Data Wrapper allow your PostgreSQL to query a LDAP server and retrieve data from some pre-configured Organizational Unit",
-   "version": "0.1.0",
+   "version": "0.1.1",
    "maintainer": "Dickson S. Guedes <guedes@guedesoft.net>",
    "license": {
 	   "PostgreSQL": "http://www.postgresql.org/about/licence"
@@ -19,10 +19,10 @@
          "abstract": "LDAP Foreign Data Wrapper",
          "file": "sql/ldap_fdw.sql",
          "docfile": "doc/ldap_fdw.md",
-         "version": "0.1.0"
+         "version": "0.1.1"
       }
    },
-   "release_status": "testing",
+   "release_status": "stable",
    "generated_by": "Dickson S. Guedes <guedes@guedesoft.net>",
    "meta-spec": {
       "version": "1.0.0",
