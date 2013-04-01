@@ -98,4 +98,4 @@ Copyright and License
 
 This software is released under the PostgreSQL Licence.
 
-Copyright (c) 2011 Dickson S. Guedes.
+Copyright (c) 2011-2013 Dickson S. Guedes.

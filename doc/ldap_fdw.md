@@ -9,7 +9,7 @@ A PostgreSQL's Foreign Data Wrapper (FDW) to query LDAP servers.
 Warnings
 --------
 
-* **DO NOT USE IT ON PRODUCTION**: It is not production ready but you could test it in your test
+* **USE WITH CAUTION**: It is not production ready but you could test it in your test
 server and help us to improve it;
 * it not implements limits *yet*, so if you do a `select * from ldap_table` it will fetch all records from LDAP server. Some LDAP servers limits this to 500;
 * by now it only supports two columns: `dn` and `object_body` where the former is populated with the DN and the last with the LDAP entry converted to a Hstore compatible format;
