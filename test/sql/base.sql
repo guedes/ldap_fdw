@@ -31,3 +31,5 @@ ALTER FOREIGN TABLE ldap_john_smith
 OPTIONS ( ADD attributes 'gidNumber,uidNumber,homeDirectory,nonExistant' );
 
 SELECT * FROM ldap_john_smith;
+
+EXPLAIN SELECT * FROM ldap_john_smith;
