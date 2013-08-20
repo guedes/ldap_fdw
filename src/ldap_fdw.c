@@ -318,8 +318,11 @@ ldapEndForeignScan(ForeignScanState *node)
 {
   LdapFdwExecutionState   *festate  = (LdapFdwExecutionState *) node->fdw_state;
 
-  ldap_memfree(festate->ldap_entry);
-  ldap_unbind( festate->ldap_connection );
+  if (!EXEC_FLAG_EXPLAIN_ONLY)
+  {
+     ldap_memfree(festate->ldap_entry);
+	 ldap_unbind( festate->ldap_connection );
+  }
 }
 
 /*
