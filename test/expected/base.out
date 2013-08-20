@@ -92,3 +92,11 @@ SELECT * FROM ldap_john_smith;
                                              | 
 (1 row)
 
+EXPLAIN SELECT * FROM ldap_john_smith;
+                               QUERY PLAN                                
+-------------------------------------------------------------------------
+ Foreign Scan on ldap_john_smith  (cost=10.00..510.00 rows=500 width=64)
+   Foreign Ldap: ldap
+   Foreign Ldap cost: 10
+(3 rows)
+
