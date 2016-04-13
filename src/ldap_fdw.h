@@ -64,13 +64,6 @@
 #define LDAP_FDW_OPTION_QUERY_DEFAULT       (char *) "(objectClass=*)"
 #define LDAP_FDW_OPTION_LDAP_VERSION_DEFAULT  LDAP_VERSION3
 
-extern LDAP *ldap_init(char *, int);
-extern int ldap_simple_bind_s(LDAP *, const char *, const char *);
-extern char **ldap_get_values(LDAP *, LDAPMessage *, char *);
-extern int ldap_count_values(char **);
-extern void ldap_value_free(char **);
-extern int ldap_unbind(LDAP *);
-
 /*
  * Valid options that could be used by
  * this wrapper
@@ -144,7 +137,11 @@ ldapGetForeignPlan(PlannerInfo *root,
                    Oid foreigntableid,
                    ForeignPath *best_path,
                    List *tlist,
-                   List *scan_clauses);
+                   List *scan_clauses
+#if PG_VERSION_NUM >= 90500
+				   , Plan *outer_plan
+#endif                                     
+                   );
 
 static void
 ldapExplainForeignScan(ForeignScanState *node,
