@@ -106,7 +106,11 @@ ldapGetForeignPaths(PlannerInfo *root,
   add_path(baserel, (Path *)
            create_foreignscan_path(root, baserel,
                                    baserel->rows, startup_cost, total_cost,
-                                   NIL, NULL, NIL));
+                                   NIL, NULL, NULL
+#if PG_VERSION_NUM >= 90500
+                                   , NIL
+#endif
+                                   ));
 }
 
 static ForeignScan *
@@ -115,13 +119,21 @@ ldapGetForeignPlan(PlannerInfo *root,
                    Oid foreigntableid,
                    ForeignPath *best_path,
                    List *tlist,
-                   List *scan_clauses)
+                   List *scan_clauses
+#if PG_VERSION_NUM >= 90500
+				   , Plan *outer_plan
+#endif                                     
+                   )
 {
   Index scan_relid = baserel->relid;
 
   scan_clauses = extract_actual_clauses(scan_clauses, false);
 
-  return make_foreignscan(tlist, scan_clauses, scan_relid, NIL, NIL);
+  return make_foreignscan(tlist, scan_clauses, scan_relid, NIL, NIL
+#if PG_VERSION_NUM >= 90500
+							, NIL, NIL, outer_plan
+#endif
+  );
 }
 
 static void
@@ -132,7 +144,7 @@ ldapExplainForeignScan(ForeignScanState *node, ExplainState *es)
 
   if (es->costs)
   {
-    ExplainPropertyLong("Foreign Ldap cost", 10.5, es);
+    ExplainPropertyFloat("Foreign Ldap cost", 10.5, 1, es);
   }
 }
 
